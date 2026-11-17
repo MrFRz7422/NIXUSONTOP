@@ -1,0 +1,709 @@
+--[[
+	NIXUS — DOORS
+	Godmode, Anti Entity, Speed, Noclip, Auto Hide, Instant Interact,
+	Fullbright, Entity ESP, Door Bypass — all hardened
+]]
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+Library.ForceCheckbox = false
+Library.ShowToggleFrameInKeybinds = true
+
+local Window = Library:CreateWindow({
+	Title = "NIXUS",
+	Footer = "doors hardened",
+	Icon = 95816097006870,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
+	Center = true,
+	AutoShow = true,
+	Resizable = true,
+})
+
+local Tabs = {
+	Main = Window:AddTab("Main", "user"),
+	Movement = Window:AddTab("Movement", "move"),
+	Visuals = Window:AddTab("Visuals", "eye"),
+	Anti = Window:AddTab("Anti Entity", "shield"),
+	QOL = Window:AddTab("QOL", "zap"),
+	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+-- ===================== MAIN =====================
+local InfoBox = Tabs.Main:AddLeftGroupbox("Info")
+InfoBox:AddLabel("NIXUS — all systems hardened")
+InfoBox:AddLabel("Anti All + Godmode ON by default")
+InfoBox:AddButton({
+	Text = "Force Refresh",
+	Func = function()
+		refreshLists()
+		Library:Notify("Refreshed", 2)
+	end,
+})
+
+-- ===================== MOVEMENT =====================
+local MoveBox = Tabs.Movement:AddLeftGroupbox("Movement")
+
+MoveBox:AddSlider("WalkSpeed", {
+	Text = "WalkSpeed",
+	Default = 22,
+	Min = 16,
+	Max = 250,
+	Rounding = 0,
+})
+
+MoveBox:AddSlider("JumpPower", {
+	Text = "JumpPower",
+	Default = 50,
+	Min = 50,
+	Max = 250,
+	Rounding = 0,
+})
+
+MoveBox:AddToggle("LockSpeed", {
+	Text = "Lock WalkSpeed",
+	Default = true,
+})
+
+MoveBox:AddToggle("InfJump", {
+	Text = "Infinite Jump",
+	Default = false,
+})
+
+MoveBox:AddToggle("Noclip", {
+	Text = "Noclip",
+	Default = false,
+})
+
+-- ===================== VISUALS =====================
+local VisLeft = Tabs.Visuals:AddLeftGroupbox("ESP")
+VisLeft:AddToggle("PlayerESP", { Text = "Player ESP", Default = false })
+VisLeft:AddToggle("DoorESP", { Text = "Door ESP", Default = false })
+VisLeft:AddToggle("EntityESP", { Text = "Entity ESP", Default = true })
+
+local VisRight = Tabs.Visuals:AddRightGroupbox("Lighting")
+VisRight:AddToggle("Fullbright", { Text = "Fullbright", Default = false })
+VisRight:AddToggle("NoFog", { Text = "No Fog", Default = true })
+VisRight:AddToggle("RemoveDarkness", { Text = "Remove Darkness", Default = true })
+
+-- ===================== ANTI ENTITY =====================
+local AntiBox = Tabs.Anti:AddLeftGroupbox("Anti Entities")
+AntiBox:AddToggle("AntiAll", {
+	Text = "Anti All Entities",
+	Default = true,
+})
+AntiBox:AddToggle("EntityNotify", {
+	Text = "Notify on Entity",
+	Default = true,
+})
+AntiBox:AddLabel("Hotel • Mines • Rooms • Outdoors • Archives")
+
+AntiBox:AddDivider()
+AntiBox:AddToggle("AntiJeff", { Text = "Remove Jeff", Default = false })
+AntiBox:AddToggle("AntiElGoblino", { Text = "Remove El Goblino", Default = false })
+AntiBox:AddToggle("AntiBob", { Text = "Remove Bob", Default = false })
+AntiBox:AddToggle("AntiGuidingLight", { Text = "Remove Guiding Light", Default = false })
+AntiBox:AddToggle("AntiCuriousLight", { Text = "Remove Curious Light", Default = false })
+
+-- ===================== QOL =====================
+local QOLBox = Tabs.QOL:AddLeftGroupbox("Quality of Life")
+QOLBox:AddToggle("Godmode", { Text = "Godmode / No Damage", Default = true })
+QOLBox:AddToggle("AutoHide", { Text = "Auto Hide (Rush/Ambush)", Default = true })
+QOLBox:AddToggle("InstantInteract", { Text = "Instant Interact", Default = true })
+QOLBox:AddToggle("AutoLoot", { Text = "Auto Loot / Gold", Default = false })
+QOLBox:AddToggle("SkipCutscenes", { Text = "Skip Cutscenes", Default = true })
+QOLBox:AddToggle("AntiLag", { Text = "Anti Lag on Entity", Default = true })
+
+local DoorBox = Tabs.QOL:AddRightGroupbox("Doors")
+DoorBox:AddToggle("DoorBypass", { Text = "Unlock All Doors", Default = false })
+DoorBox:AddButton({
+	Text = "Fire Door Remotes",
+	Func = function()
+		local count = 0
+		for _, rem in ipairs(game:GetDescendants()) do
+			if rem:IsA("RemoteEvent") then
+				local n = string.lower(rem.Name)
+				if string.find(n, "door") or string.find(n, "unlock") or string.find(n, "open") or string.find(n, "gate") then
+					pcall(function()
+						rem:FireServer()
+						rem:FireServer(true)
+						rem:FireServer("Open")
+					end)
+					count = count + 1
+				end
+			end
+		end
+		Library:Notify("Fired " .. tostring(count) .. " door remotes", 3)
+	end,
+})
+
+-- ===================== UI SETTINGS + CONFIG =====================
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu")
+
+MenuGroup:AddToggle("ShowCustomCursor", {
+	Text = "Custom Cursor",
+	Default = true,
+	Callback = function(v)
+		Library.ShowCustomCursor = v
+	end,
+})
+
+MenuGroup:AddDropdown("NotificationSide", {
+	Values = { "Left", "Right" },
+	Default = "Right",
+	Text = "Notification Side",
+	Callback = function(v)
+		Library:SetNotifySide(v)
+	end,
+})
+
+MenuGroup:AddDropdown("DPIDropdown", {
+	Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
+	Default = "100%",
+	Text = "DPI Scale",
+	Callback = function(v)
+		local num = tonumber((v:gsub("%%", "")))
+		if num then Library:SetDPIScale(num) end
+	end,
+})
+
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
+	Default = "RightShift",
+	NoUI = true,
+	Text = "Menu keybind",
+})
+
+MenuGroup:AddButton("Unload", function()
+	Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("NIXUS")
+SaveManager:SetFolder("NIXUS/configs")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+pcall(function() SaveManager:LoadAutoloadConfig() end)
+
+-- =========================================================
+-- SERVICES
+-- =========================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+local LP = Players.LocalPlayer
+
+local State = {
+	DoorList = {},
+	EntityList = {},
+	OriginalFog = Lighting.FogEnd,
+	OriginalBrightness = Lighting.Brightness,
+	OriginalClock = Lighting.ClockTime,
+}
+
+pcall(function()
+	local old = CoreGui:FindFirstChild("NIXUS_ESP")
+	if old then old:Destroy() end
+end)
+
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "NIXUS_ESP"
+ESPFolder.Parent = CoreGui
+
+local function clearESP()
+	for _, c in ipairs(ESPFolder:GetChildren()) do
+		c:Destroy()
+	end
+end
+
+local function makeBillboard(adornee, text, color)
+	if not adornee then return end
+	local bb = Instance.new("BillboardGui")
+	bb.Adornee = adornee
+	bb.Size = UDim2.new(0, 150, 0, 30)
+	bb.StudsOffset = Vector3.new(0, 3, 0)
+	bb.AlwaysOnTop = true
+	bb.Parent = ESPFolder
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, 0, 1, 0)
+	lbl.BackgroundTransparency = 0.25
+	lbl.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	lbl.Text = text
+	lbl.TextColor3 = color
+	lbl.Font = Enum.Font.GothamBold
+	lbl.TextSize = 13
+	lbl.Parent = bb
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = lbl
+end
+
+function refreshLists()
+	State.DoorList = {}
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		local n = string.lower(obj.Name)
+		if (string.find(n, "door") or string.find(n, "gate") or string.find(n, "entrance"))
+			and (obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Folder")) then
+			table.insert(State.DoorList, obj)
+		end
+	end
+end
+
+local function safeFirePrompt(prompt)
+	if not prompt then return end
+	pcall(function()
+		prompt.HoldDuration = 0
+		if fireproximityprompt then
+			fireproximityprompt(prompt)
+		else
+			prompt:InputHoldBegin()
+			task.wait(0.03)
+			prompt:InputHoldEnd()
+		end
+	end)
+end
+
+local function getHum()
+	local char = LP.Character
+	return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local function getRoot()
+	local char = LP.Character
+	return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+-- =========================================================
+-- SPEED (always applied when LockSpeed is on)
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.05)
+		if Toggles.LockSpeed and Toggles.LockSpeed.Value then
+			local hum = getHum()
+			if hum and Options.WalkSpeed then
+				hum.WalkSpeed = Options.WalkSpeed.Value
+			end
+		end
+		if Options.JumpPower then
+			local hum = getHum()
+			if hum then
+				hum.UseJumpPower = true
+				hum.JumpPower = Options.JumpPower.Value
+			end
+		end
+	end
+end)
+
+-- also apply instantly when slider changes
+Options.WalkSpeed:OnChanged(function()
+	local hum = getHum()
+	if hum then hum.WalkSpeed = Options.WalkSpeed.Value end
+end)
+
+Options.JumpPower:OnChanged(function()
+	local hum = getHum()
+	if hum then
+		hum.UseJumpPower = true
+		hum.JumpPower = Options.JumpPower.Value
+	end
+end)
+
+-- =========================================================
+-- INFINITE JUMP
+-- =========================================================
+UserInputService.JumpRequest:Connect(function()
+	if Toggles.InfJump and Toggles.InfJump.Value then
+		local hum = getHum()
+		if hum then
+			hum:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+	end
+end)
+
+-- =========================================================
+-- NOCLIP
+-- =========================================================
+RunService.Stepped:Connect(function()
+	if Toggles.Noclip and Toggles.Noclip.Value then
+		local char = LP.Character
+		if char then
+			for _, part in ipairs(char:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+				end
+			end
+		end
+	end
+end)
+
+-- =========================================================
+-- GODMODE (aggressive)
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.03)
+		if Toggles.Godmode and Toggles.Godmode.Value then
+			local hum = getHum()
+			if hum then
+				hum.Health = hum.MaxHealth
+				pcall(function()
+					hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+					hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+					hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+				end)
+			end
+		end
+	end
+end)
+
+-- extra godmode on health change
+LP.CharacterAdded:Connect(function(char)
+	task.wait(0.3)
+	local hum = char:WaitForChild("Humanoid", 5)
+	if hum then
+		hum.WalkSpeed = Options.WalkSpeed and Options.WalkSpeed.Value or 16
+		hum.UseJumpPower = true
+		hum.JumpPower = Options.JumpPower and Options.JumpPower.Value or 50
+
+		hum.HealthChanged:Connect(function()
+			if Toggles.Godmode and Toggles.Godmode.Value then
+				hum.Health = hum.MaxHealth
+			end
+		end)
+	end
+end)
+
+-- =========================================================
+-- LIGHTING
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.4)
+		pcall(function()
+			if Toggles.Fullbright and Toggles.Fullbright.Value then
+				Lighting.Brightness = 3
+				Lighting.ClockTime = 14
+				Lighting.FogEnd = 9e9
+				Lighting.GlobalShadows = false
+				Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
+			else
+				Lighting.Brightness = State.OriginalBrightness
+				Lighting.ClockTime = State.OriginalClock
+				Lighting.GlobalShadows = true
+			end
+
+			if (Toggles.NoFog and Toggles.NoFog.Value) or (Toggles.RemoveDarkness and Toggles.RemoveDarkness.Value) then
+				Lighting.FogEnd = 9e9
+				Lighting.FogStart = 0
+				for _, v in ipairs(Lighting:GetChildren()) do
+					if v:IsA("Atmosphere") then
+						v.Density = 0
+					end
+				end
+			end
+		end)
+	end
+end)
+
+-- =========================================================
+-- INSTANT INTERACT
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.35)
+		if Toggles.InstantInteract and Toggles.InstantInteract.Value then
+			for _, prompt in ipairs(workspace:GetDescendants()) do
+				if prompt:IsA("ProximityPrompt") then
+					prompt.HoldDuration = 0
+					if prompt.MaxActivationDistance < 18 then
+						prompt.MaxActivationDistance = 18
+					end
+				end
+			end
+		end
+	end
+end)
+
+-- =========================================================
+-- AUTO LOOT
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.35)
+		if Toggles.AutoLoot and Toggles.AutoLoot.Value then
+			local root = getRoot()
+			if root then
+				for _, obj in ipairs(workspace:GetDescendants()) do
+					local n = string.lower(obj.Name)
+					if string.find(n, "gold") or string.find(n, "coin") or string.find(n, "loot")
+						or string.find(n, "key") or string.find(n, "bandage") or string.find(n, "candle")
+						or string.find(n, "crucifix") or string.find(n, "lighter") or string.find(n, "vitamins") then
+						local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+						if part and (part.Position - root.Position).Magnitude < 28 then
+							for _, p in ipairs(obj:GetDescendants()) do
+								if p:IsA("ProximityPrompt") then
+									safeFirePrompt(p)
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+-- =========================================================
+-- SKIP CUTSCENES
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if Toggles.SkipCutscenes and Toggles.SkipCutscenes.Value then
+			pcall(function()
+				for _, obj in ipairs(workspace:GetDescendants()) do
+					local n = string.lower(obj.Name)
+					if string.find(n, "cutscene") or string.find(n, "intro") or string.find(n, "cinematic") then
+						obj:Destroy()
+					end
+				end
+				if workspace.CurrentCamera then
+					workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+				end
+			end)
+		end
+	end
+end)
+
+-- =========================================================
+-- DOOR BYPASS
+-- =========================================================
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		if Toggles.DoorBypass and Toggles.DoorBypass.Value then
+			for _, d in ipairs(State.DoorList) do
+				pcall(function()
+					if d:IsA("BasePart") then d.CanCollide = false end
+					for _, c in ipairs(d:GetDescendants()) do
+						if c:IsA("BasePart") then c.CanCollide = false end
+						if c:IsA("ProximityPrompt") then
+							c.Enabled = true
+							c.HoldDuration = 0
+							c.MaxActivationDistance = 50
+						end
+					end
+				end)
+			end
+		end
+	end
+end)
+
+-- =========================================================
+-- ESP
+-- =========================================================
+RunService.RenderStepped:Connect(function()
+	clearESP()
+	if Toggles.PlayerESP and Toggles.PlayerESP.Value then
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LP and plr.Character then
+				local root = plr.Character:FindFirstChild("HumanoidRootPart")
+				if root then
+					makeBillboard(root, plr.Name, Color3.fromRGB(100, 180, 255))
+				end
+			end
+		end
+	end
+	if Toggles.DoorESP and Toggles.DoorESP.Value then
+		for _, d in ipairs(State.DoorList) do
+			local part = d:IsA("BasePart") and d or d:FindFirstChildWhichIsA("BasePart", true)
+			if part then
+				makeBillboard(part, d.Name, Color3.fromRGB(100, 255, 140))
+			end
+		end
+	end
+	if Toggles.EntityESP and Toggles.EntityESP.Value then
+		for _, ent in ipairs(State.EntityList) do
+			if ent and ent.Parent then
+				local part = ent:IsA("BasePart") and ent or ent:FindFirstChildWhichIsA("BasePart", true)
+				if part then
+					makeBillboard(part, ent.Name, Color3.fromRGB(255, 70, 70))
+				end
+			end
+		end
+	end
+end)
+
+-- =========================================================
+-- ANTI ENTITY (fast + ChildAdded)
+-- =========================================================
+local KillList = {
+	"Rush", "Ambush", "Seek", "Figure", "Screech", "Eyes", "Halt", "Dupe", "Hide",
+	"Timothy", "Jack", "Shadow", "Void", "Snare", "Dread", "Sally", "Window",
+	"Giggle", "Gloombats", "Grumble", "Queen Grumble", "Louie", "Dam Seek",
+	"Blitz", "Haste", "Lookman", "A-60", "A-90", "A-120", "A60", "A90", "A120",
+	"The Groundskeeper", "Mandrake", "Monument", "Eyestalk", "Bramble", "Surge", "Caw", "Grampy", "The World Lotus",
+	"Honcho", "Alma", "Teller", "Ransom", "Drones", "Bash", "Scribbles", "Forget-Me-Not",
+	"Portrait", "Fih", "Creak", "Noise", "Stem", "Cobbler", "Meld", "Hijack",
+	"The Unnamed Red Light", "Glitch",
+	"RushMoving", "AmbushMoving", "SeekMoving", "FigureRig",
+}
+
+local OptionalKill = {
+	Jeff = "AntiJeff",
+	["El Goblino"] = "AntiElGoblino",
+	Bob = "AntiBob",
+	["Guiding Light"] = "AntiGuidingLight",
+	["Curious Light"] = "AntiCuriousLight",
+}
+
+local function shouldKill(name)
+	if not (Toggles.AntiAll and Toggles.AntiAll.Value) then return false end
+	for _, n in ipairs(KillList) do
+		if name == n then return true end
+	end
+	for realName, toggleName in pairs(OptionalKill) do
+		if name == realName and Toggles[toggleName] and Toggles[toggleName].Value then
+			return true
+		end
+	end
+	return false
+end
+
+local function neutralize(obj)
+	pcall(function()
+		for _, c in ipairs(obj:GetDescendants()) do
+			if c:IsA("Sound") then
+				c.Volume = 0
+				c:Stop()
+			end
+			if c:IsA("BasePart") then
+				c.CanCollide = false
+				c.Transparency = 1
+				c.Anchored = true
+			end
+			if c:IsA("ParticleEmitter") or c:IsA("Trail") or c:IsA("Beam") then
+				c.Enabled = false
+			end
+		end
+		obj:Destroy()
+	end)
+end
+
+local function findNearestCloset()
+	local root = getRoot()
+	if not root then return nil end
+	local closest, dist = nil, 50
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		local n = string.lower(obj.Name)
+		if string.find(n, "closet") or string.find(n, "wardrobe") or string.find(n, "cabinet") or string.find(n, "locker") then
+			local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+			if part then
+				local d = (part.Position - root.Position).Magnitude
+				if d < dist then
+					closest = obj
+					dist = d
+				end
+			end
+		end
+	end
+	return closest
+end
+
+local function forceHide()
+	local closet = findNearestCloset()
+	if not closet then return end
+	local prompt = closet:FindFirstChildWhichIsA("ProximityPrompt", true)
+	if prompt then
+		safeFirePrompt(prompt)
+	end
+	local part = closet:IsA("BasePart") and closet or closet:FindFirstChildWhichIsA("BasePart", true)
+	local root = getRoot()
+	if part and root then
+		pcall(function()
+			root.CFrame = part.CFrame * CFrame.new(0, 1.5, 0)
+		end)
+	end
+end
+
+local lastNotify = 0
+
+local function processEntity(obj)
+	if not obj or not obj.Parent then return end
+	if not shouldKill(obj.Name) then return end
+
+	table.insert(State.EntityList, obj)
+
+	if Toggles.EntityNotify and Toggles.EntityNotify.Value and (tick() - lastNotify) > 1.5 then
+		Library:Notify("Entity: " .. obj.Name, 2)
+		lastNotify = tick()
+	end
+
+	if Toggles.AutoHide and Toggles.AutoHide.Value then
+		local n = obj.Name
+		if n == "Rush" or n == "Ambush" or n == "RushMoving" or n == "AmbushMoving" then
+			forceHide()
+		end
+	end
+
+	if Toggles.AntiLag and Toggles.AntiLag.Value then
+		for _, s in ipairs(obj:GetDescendants()) do
+			if s:IsA("Sound") then
+				s.Volume = 0
+				s:Stop()
+			end
+		end
+	end
+
+	neutralize(obj)
+end
+
+-- fast loop
+task.spawn(function()
+	while true do
+		task.wait(0.08)
+		State.EntityList = {}
+		if Toggles.AntiAll and Toggles.AntiAll.Value then
+			pcall(function()
+				for _, obj in ipairs(workspace:GetDescendants()) do
+					processEntity(obj)
+				end
+			end)
+		end
+	end
+end)
+
+-- instant reaction on new children
+workspace.DescendantAdded:Connect(function(obj)
+	if Toggles.AntiAll and Toggles.AntiAll.Value then
+		task.defer(function()
+			processEntity(obj)
+		end)
+	end
+end)
+
+-- =========================================================
+-- START
+-- =========================================================
+task.delay(1, function()
+	refreshLists()
+	Library:Notify("NIXUS ready — Godmode + Anti All + Speed locked", 5)
+end)
+
+print("[NIXUS] all systems online")
